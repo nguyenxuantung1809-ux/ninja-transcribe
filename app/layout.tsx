@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ninja-transcribe.hasagi0908.chatgpt.site'),
   title: 'Ninja Transcribe — Video to Text',
   description: 'Turn video, audio and YouTube content into clean, timestamped transcripts.',
   openGraph: {
