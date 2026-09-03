@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app.pipeline import PipelineError, _map_youtube_error, _merge_transcriptions, _openai_request, cleanup_expired_paths, extract_video_id
+from app.pipeline import PipelineError, _map_youtube_error, _merge_transcriptions, _openai_request, _ydl_options, cleanup_expired_paths, extract_video_id
 
 
 class YouTubeUrlTests(unittest.TestCase):
@@ -50,6 +50,7 @@ class ErrorMappingTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assertEqual(_map_youtube_error(RuntimeError(message)).code, code)
         self.assertEqual(_map_youtube_error(RuntimeError("download stopped"), audio_download=True).code, "AUDIO_DOWNLOAD_FAILED")
+        self.assertNotEqual(_map_youtube_error(RuntimeError("Requested format is not available")).code, "VIDEO_UNAVAILABLE")
 
     def test_missing_api_key_stays_server_side(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -60,6 +61,15 @@ class ErrorMappingTests(unittest.TestCase):
                     _openai_request(audio, "whisper-1")
         self.assertEqual(context.exception.code, "OPENAI_API_KEY_MISSING")
         self.assertNotIn("OPENAI_API_KEY", context.exception.public_message)
+
+
+class YouTubeRuntimeTests(unittest.TestCase):
+    def test_node_ejs_and_pot_provider_are_enabled(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            options = _ydl_options(Path(raw), False, lambda *_: None)
+        self.assertEqual(options["js_runtimes"], {"node": {}})
+        self.assertEqual(options["extractor_args"]["youtube"]["player_client"], ["mweb", "web_safari"])
+        self.assertEqual(options["extractor_args"]["youtubepot-bgutilhttp"]["base_url"], ["http://127.0.0.1:4416"])
 
 
 class CleanupTests(unittest.TestCase):

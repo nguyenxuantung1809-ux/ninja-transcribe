@@ -67,7 +67,7 @@ def _map_youtube_error(error: BaseException, *, audio_download: bool = False) ->
         return PipelineError("PRIVATE_VIDEO", "This YouTube video is private.")
     if any(token in detail for token in ("sign in to confirm your age", "age-restricted", "login required", "members-only")):
         return PipelineError("LOGIN_REQUIRED", "This video is age/login restricted and cannot be accessed by the transcription server.")
-    if any(token in detail for token in ("video unavailable", "video is unavailable", "has been removed", "not available", "copyright")):
+    if any(token in detail for token in ("video unavailable", "video is unavailable", "this video is unavailable", "has been removed", "copyright")):
         return PipelineError("VIDEO_UNAVAILABLE", "This YouTube video is unavailable.")
     if any(token in detail for token in ("http error 403", "http error 429", "forbidden", "too many requests", "not a bot")):
         return PipelineError("YOUTUBE_BLOCKED", "YouTube refused access from the transcription server. Please try again shortly.", 502)
@@ -126,6 +126,7 @@ def _ydl_options(temp_dir: Path, download: bool, progress: ProgressCallback) -> 
         "extractor_retries": 3,
         "outtmpl": str(temp_dir / "source.%(ext)s"),
         "format": "bestaudio" if download else None,
+        "js_runtimes": {"node": {}},
         "extractor_args": {
             "youtube": {"player_client": player_clients},
             "youtubepot-bgutilhttp": {"base_url": [pot_provider_url]},
