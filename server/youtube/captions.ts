@@ -2,6 +2,13 @@ import type { TranscriptResult, TranscriptSegment } from '@/types/transcript';
 
 type CaptionTrack = { baseUrl?: string; languageCode?: string; name?: { simpleText?: string; runs?: Array<{ text?: string }> } };
 
+const YOUTUBE_HEADERS = {
+  'Accept-Language': 'en-US,en;q=0.9',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36',
+};
+
+const pause = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
 function getVideoId(input: string): string | null {
   try {
     const url = new URL(input.trim());
@@ -53,9 +60,31 @@ export async function fetchYouTubeCaptions(input: string): Promise<TranscriptRes
   const videoId = getVideoId(input);
   if (!videoId) throw new Error('INVALID_URL');
   const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  const watch = await fetch(`${canonicalUrl}&hl=en`, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NinjaTranscribe/1.0)' }, signal: AbortSignal.timeout(20_000) });
-  if (!watch.ok) throw new Error(watch.status === 404 ? 'UNAVAILABLE' : 'YOUTUBE_ERROR');
-  const html = await watch.text();
+  let html = '';
+  let lastWatchError = 'YOUTUBE_ERROR';
+  const watchUrls = [`${canonicalUrl}&hl=en`, `https://m.youtube.com/watch?v=${videoId}&hl=en`];
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const watch = await fetch(watchUrls[Math.min(attempt, watchUrls.length - 1)], {
+        cache: 'no-store',
+        headers: YOUTUBE_HEADERS,
+        signal: AbortSignal.timeout(12_000),
+      });
+      if (watch.status === 404) throw new Error('UNAVAILABLE');
+      if (!watch.ok) {
+        lastWatchError = `YOUTUBE_HTTP_${watch.status}`;
+      } else {
+        html = await watch.text();
+        if (html.includes('"captionTracks":')) break;
+        lastWatchError = 'NO_CAPTIONS';
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === 'UNAVAILABLE') throw error;
+      lastWatchError = error instanceof DOMException && error.name === 'TimeoutError' ? 'YOUTUBE_TIMEOUT' : 'YOUTUBE_ERROR';
+    }
+    if (attempt < 2) await pause(250 * (attempt + 1));
+  }
+  if (!html) throw new Error(lastWatchError);
   if (/"playabilityStatus"\s*:\s*\{\s*"status"\s*:\s*"(?:LOGIN_REQUIRED|UNPLAYABLE|ERROR)"/.test(html)) throw new Error('UNAVAILABLE');
   const rawTracks = extractJsonArray(html, '"captionTracks":');
   if (!rawTracks) throw new Error('NO_CAPTIONS');
@@ -66,9 +95,14 @@ export async function fetchYouTubeCaptions(input: string): Promise<TranscriptRes
   if (!track?.baseUrl) throw new Error('NO_CAPTIONS');
   const captionUrl = new URL(track.baseUrl);
   captionUrl.searchParams.set('fmt', 'json3');
-  const captions = await fetch(captionUrl, { signal: AbortSignal.timeout(20_000) });
-  if (!captions.ok) throw new Error('NO_CAPTIONS');
-  const body = await captions.json().catch(() => null) as { events?: Array<{ tStartMs?: number; dDurationMs?: number; segs?: Array<{ utf8?: string }> }> } | null;
+  let body: { events?: Array<{ tStartMs?: number; dDurationMs?: number; segs?: Array<{ utf8?: string }> }> } | null = null;
+  for (let attempt = 0; attempt < 3 && !body?.events?.length; attempt += 1) {
+    try {
+      const captions = await fetch(captionUrl, { cache: 'no-store', headers: YOUTUBE_HEADERS, signal: AbortSignal.timeout(12_000) });
+      if (captions.ok) body = await captions.json().catch(() => null) as typeof body;
+    } catch { /* The backend remains the mandatory fallback after retries. */ }
+    if (!body?.events?.length && attempt < 2) await pause(250 * (attempt + 1));
+  }
   const segments: TranscriptSegment[] = (body?.events || []).flatMap((event, index) => {
     const text = event.segs?.map((segment) => segment.utf8 || '').join('').replace(/\s+/g, ' ').trim();
     if (!text) return [];
