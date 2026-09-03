@@ -37,3 +37,10 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Python backend
+/backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.tsbuildinfo

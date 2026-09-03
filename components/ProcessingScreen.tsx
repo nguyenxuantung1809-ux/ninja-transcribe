@@ -1,4 +1,5 @@
 import type { SourceKind } from '@/types/transcript';
+import type { YouTubeStage } from '@/services/youtube/client';
 
 const steps = [
   { min: 0, label: 'Preparing source' },
@@ -8,8 +9,18 @@ const steps = [
   { min: 91, label: 'Generating transcript' },
 ];
 
-export function ProcessingScreen({ progress, source }: { progress: number; source: SourceKind }) {
-  const activeIndex = steps.reduce((found, step, index) => progress >= step.min ? index : found, 0);
+const youtubeSteps: Array<{ stage: YouTubeStage; label: string }> = [
+  { stage: 'reading_video', label: 'Đang đọc video' },
+  { stage: 'downloading_audio', label: 'Đang lấy audio' },
+  { stage: 'transcribing', label: 'Đang chuyển giọng nói thành text' },
+  { stage: 'completed', label: 'Hoàn thành' },
+];
+
+const stageOrder: Record<YouTubeStage, number> = { reading_video: 0, downloading_audio: 1, converting_audio: 1, transcribing: 2, completed: 3 };
+
+export function ProcessingScreen({ progress, source, youtubeStage = 'reading_video' }: { progress: number; source: SourceKind; youtubeStage?: YouTubeStage }) {
+  const activeIndex = source === 'youtube' ? stageOrder[youtubeStage] : steps.reduce((found, step, index) => progress >= step.min ? index : found, 0);
+  const displayedSteps = source === 'youtube' ? youtubeSteps : steps;
   return (
     <section className="processing-panel" aria-live="polite" aria-label="Transcription progress">
       <div className="chakra-core"><span>忍</span><i /><b /></div>
@@ -17,9 +28,9 @@ export function ProcessingScreen({ progress, source }: { progress: number; sourc
       <h2>TRANSCRIPTION JUTSU</h2>
       <p className="processing-copy">Listening carefully. Long missions can take several minutes.</p>
       <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
-      <div className="progress-meta"><strong>{Math.round(progress)}%</strong><span>{steps[activeIndex].label}...</span></div>
+      <div className="progress-meta"><strong>{Math.round(progress)}%</strong><span>{displayedSteps[activeIndex].label}{activeIndex < displayedSteps.length - 1 ? '...' : ''}</span></div>
       <ol className="process-steps">
-        {steps.map((step, index) => <li key={step.label} className={index < activeIndex ? 'done' : index === activeIndex ? 'current' : ''}><span>{index < activeIndex ? '✓' : String(index + 1).padStart(2, '0')}</span>{step.label}</li>)}
+        {displayedSteps.map((step, index) => <li key={step.label} className={index < activeIndex ? 'done' : index === activeIndex ? 'current' : ''}><span>{index < activeIndex ? '✓' : String(index + 1).padStart(2, '0')}</span>{step.label}</li>)}
       </ol>
     </section>
   );
