@@ -21,3 +21,11 @@ $env:BACKEND_SHARED_SECRET = "local-development-secret"
 ```
 
 The frontend uses `TRANSCRIPTION_BACKEND_URL=http://127.0.0.1:8788` and the same `BACKEND_SHARED_SECRET` value. Deploy the `backend` Dockerfile to Railway (or any Docker host), then place its HTTPS URL and secret in the Sites environment. Never expose `OPENAI_API_KEY` in any `NEXT_PUBLIC_*` variable.
+
+From the repository root, the shortest Railway deployment is:
+
+```powershell
+railway up ./backend --path-as-root --new --name ninja-transcribe-backend
+```
+
+Add the required secrets in the Railway service Variables tab, configure a public domain, and keep this job service at one replica because job state is process-local. The included health check uses `/health` and the container listens on Railway's injected `PORT`.

@@ -9,9 +9,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /service
-COPY backend/requirements.txt ./
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-COPY backend/app ./app
+COPY app ./app
 
 RUN useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /service
