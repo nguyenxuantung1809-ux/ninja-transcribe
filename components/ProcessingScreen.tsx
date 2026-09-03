@@ -10,10 +10,10 @@ const steps = [
 ];
 
 const youtubeSteps: Array<{ stage: YouTubeStage; label: string }> = [
-  { stage: 'reading_video', label: 'Đang đọc video' },
-  { stage: 'downloading_audio', label: 'Đang lấy audio' },
-  { stage: 'transcribing', label: 'Đang chuyển giọng nói thành text' },
-  { stage: 'completed', label: 'Hoàn thành' },
+  { stage: 'reading_video', label: 'Reading YouTube video' },
+  { stage: 'downloading_audio', label: 'Extracting audio' },
+  { stage: 'transcribing', label: 'Transcribing audio' },
+  { stage: 'completed', label: 'Preparing transcript' },
 ];
 
 const stageOrder: Record<YouTubeStage, number> = { reading_video: 0, downloading_audio: 1, converting_audio: 1, transcribing: 2, completed: 3 };

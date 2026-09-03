@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return Response.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unexpected transcription error.';
-    if (message === 'CONFIG_MISSING') return Response.json({ error: 'Transcription is ready, but the server still needs an OPENAI_API_KEY.' }, { status: 503 });
+    if (message === 'CONFIG_MISSING') return Response.json({ error: 'Speech-to-text is temporarily unavailable. Please try again later.' }, { status: 503 });
     if (error instanceof DOMException && error.name === 'TimeoutError') return Response.json({ error: 'The transcription request timed out. Try a shorter or compressed file.' }, { status: 504 });
     return Response.json({ error: message }, { status: 500 });
   }

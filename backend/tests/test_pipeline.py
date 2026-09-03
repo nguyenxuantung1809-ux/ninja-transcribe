@@ -5,8 +5,9 @@ import os
 import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from app.pipeline import PipelineError, _map_youtube_error, _merge_transcriptions, cleanup_expired_paths, extract_video_id
+from app.pipeline import PipelineError, _map_youtube_error, _merge_transcriptions, _openai_request, cleanup_expired_paths, extract_video_id
 
 
 class YouTubeUrlTests(unittest.TestCase):
@@ -49,6 +50,16 @@ class ErrorMappingTests(unittest.TestCase):
             with self.subTest(message=message):
                 self.assertEqual(_map_youtube_error(RuntimeError(message)).code, code)
         self.assertEqual(_map_youtube_error(RuntimeError("download stopped"), audio_download=True).code, "AUDIO_DOWNLOAD_FAILED")
+
+    def test_missing_api_key_stays_server_side(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            audio = Path(raw) / "chunk.mp3"
+            audio.write_bytes(b"not-real-audio")
+            with patch.dict(os.environ, {"OPENAI_API_KEY": ""}):
+                with self.assertRaises(PipelineError) as context:
+                    _openai_request(audio, "whisper-1")
+        self.assertEqual(context.exception.code, "OPENAI_API_KEY_MISSING")
+        self.assertNotIn("OPENAI_API_KEY", context.exception.public_message)
 
 
 class CleanupTests(unittest.TestCase):

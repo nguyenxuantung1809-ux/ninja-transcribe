@@ -70,7 +70,7 @@ def _map_youtube_error(error: BaseException, *, audio_download: bool = False) ->
     if any(token in detail for token in ("video unavailable", "video is unavailable", "has been removed", "not available", "copyright")):
         return PipelineError("VIDEO_UNAVAILABLE", "This YouTube video is unavailable.")
     if any(token in detail for token in ("http error 403", "http error 429", "forbidden", "too many requests", "not a bot")):
-        return PipelineError("YOUTUBE_BLOCKED", "YouTube refused access from the transcription server. Try again shortly or configure server-side YouTube cookies/proxy access.", 502)
+        return PipelineError("YOUTUBE_BLOCKED", "YouTube refused access from the transcription server. Please try again shortly.", 502)
     if audio_download:
         return PipelineError("AUDIO_DOWNLOAD_FAILED", "The server could not download this video's audio stream.", 502)
     return PipelineError("YOUTUBE_BLOCKED", "YouTube could not be read by the transcription server.", 502)
@@ -88,7 +88,7 @@ def _ffmpeg_binary() -> str:
 
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception as exc:  # pragma: no cover - depends on deployment image
-        raise PipelineError("FFMPEG_UNAVAILABLE", "ffmpeg is not installed on the transcription server.", 500) from exc
+        raise PipelineError("FFMPEG_UNAVAILABLE", "The audio processor is temporarily unavailable.", 500) from exc
 
 
 def _cookie_file(temp_dir: Path) -> Path | None:
@@ -106,7 +106,7 @@ def _cookie_file(temp_dir: Path) -> Path | None:
         target.write_bytes(base64.b64decode(encoded, validate=True))
         return target
     except (ValueError, OSError) as exc:
-        raise PipelineError("YOUTUBE_COOKIE_CONFIG_INVALID", "The server-side YouTube cookie secret is invalid.", 500) from exc
+        raise PipelineError("YOUTUBE_COOKIE_CONFIG_INVALID", "YouTube access is temporarily unavailable.", 500) from exc
 
 
 def _ydl_options(temp_dir: Path, download: bool, progress: ProgressCallback) -> dict[str, Any]:
@@ -258,7 +258,7 @@ def _make_chunks(audio_path: Path, temp_dir: Path, progress: ProgressCallback) -
 def _openai_request(chunk: Path, model: str) -> dict[str, Any]:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
-        raise PipelineError("OPENAI_API_KEY_MISSING", "OPENAI_API_KEY is not configured on the transcription backend.", 503)
+        raise PipelineError("OPENAI_API_KEY_MISSING", "Speech-to-text is temporarily unavailable. Please try again later.", 503)
     base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     if model == "whisper-1":
         data: list[tuple[str, str]] = [
@@ -372,7 +372,7 @@ def run_pipeline(input_url: str, progress: ProgressCallback) -> dict[str, Any]:
             return caption_result
 
         if not os.getenv("OPENAI_API_KEY", "").strip():
-            raise PipelineError("OPENAI_API_KEY_MISSING", "OPENAI_API_KEY is not configured on the transcription backend.", 503)
+            raise PipelineError("OPENAI_API_KEY_MISSING", "Speech-to-text is temporarily unavailable. Please try again later.", 503)
 
         audio_path = _download_audio(url, temp_dir, progress)
         chunks = _make_chunks(audio_path, temp_dir, progress)

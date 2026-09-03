@@ -14,7 +14,7 @@ function configuration() {
   if (!baseUrl) {
     throw new YouTubeBackendError(
       'YOUTUBE_BACKEND_NOT_CONFIGURED',
-      'The YouTube audio transcription backend is not configured. Set TRANSCRIPTION_BACKEND_URL on the server.',
+      'YouTube transcription is temporarily unavailable. Please try again shortly.',
       503,
     );
   }

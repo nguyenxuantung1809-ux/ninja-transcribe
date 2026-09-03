@@ -24,7 +24,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Ninja Transcribe Backend", version="1.0.0", lifespan=lifespan)
-origins = [item.strip() for item in os.getenv("ALLOWED_ORIGINS", "http://localhost:3001,http://127.0.0.1:3001").split(",") if item.strip()]
+origins = [item.strip() for item in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if item.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"])
 
 
@@ -35,7 +35,7 @@ class YouTubeJobRequest(BaseModel):
 def require_secret(authorization: str | None = Header(default=None)) -> None:
     expected = os.getenv("BACKEND_SHARED_SECRET", "").strip()
     if not expected:
-        raise HTTPException(status_code=503, detail={"code": "BACKEND_SECRET_MISSING", "message": "BACKEND_SHARED_SECRET is not configured on the transcription backend."})
+        raise HTTPException(status_code=503, detail={"code": "BACKEND_SECRET_MISSING", "message": "The transcription service is temporarily unavailable."})
     if authorization != f"Bearer {expected}":
         raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Invalid backend credential."})
 

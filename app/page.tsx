@@ -23,16 +23,8 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  const [configuration, setConfiguration] = useState<{ upload: boolean; youtube: boolean } | null>(null);
   const [youtubeStage, setYoutubeStage] = useState<YouTubeStage>('reading_video');
   const missionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    fetch('/api/health').then(async (response) => {
-      const data = await response.json() as { uploadTranscriptionConfigured?: boolean; youtubeTranscriptionConfigured?: boolean };
-      setConfiguration({ upload: Boolean(data.uploadTranscriptionConfigured), youtube: Boolean(data.youtubeTranscriptionConfigured) });
-    }).catch(() => setConfiguration(null));
-  }, []);
 
   useEffect(() => () => { if (mediaUrl) URL.revokeObjectURL(mediaUrl); }, [mediaUrl]);
 
@@ -83,7 +75,7 @@ export default function Home() {
       <div className="ambient ambient-one" /><div className="ambient ambient-two" />
       <nav className="topbar" aria-label="Primary navigation">
         <button className="brand" type="button" onClick={clear} aria-label="Ninja Transcribe home"><span className="brand-mark">忍</span><span><strong>NINJA</strong> TRANSCRIBE</span></button>
-        <div className={`status-pill ${configuration && !configuration.upload && !configuration.youtube ? 'needs-key' : ''}`}><span /> {configuration && !configuration.upload && !configuration.youtube ? 'SETUP NEEDED' : 'SYSTEM READY'}</div>
+        <div className="status-pill"><span /> SYSTEM ONLINE</div>
       </nav>
 
       {phase !== 'result' && phase !== 'processing' && <>
@@ -107,8 +99,6 @@ export default function Home() {
         </div>}
         {source !== 'youtube' && file && !details && <div className="metadata-loading"><span /> Reading media scroll...</div>}
         {source === 'youtube' && <div className="youtube-entry"><label htmlFor="youtube-url">YOUTUBE MISSION URL</label><div><span>↗</span><input id="youtube-url" value={youtubeUrl} onChange={(event) => { setYoutubeUrl(event.target.value); setError(null); }} placeholder="https://youtube.com/watch?v=..." inputMode="url" autoComplete="url" /></div><p>Paste a public YouTube link. We use captions when available, otherwise the server extracts audio and transcribes it automatically.</p></div>}
-        {configuration?.upload === false && source !== 'youtube' && <div className="setup-notice"><span>!</span><p><strong>ONE-TIME SETUP NEEDED</strong>Add <code>OPENAI_API_KEY</code> to the app environment before live transcription.</p></div>}
-        {configuration?.youtube === false && source === 'youtube' && <div className="setup-notice"><span>!</span><p><strong>YOUTUBE BACKEND SETUP NEEDED</strong>Configure the private transcription backend and its server-side <code>OPENAI_API_KEY</code>. Caption fast path may still work.</p></div>}
         {error && <div className="error-banner" role="alert"><span>!</span><p><strong>MISSION INTERRUPTED</strong>{error}</p></div>}
         <button className="jutsu-button" type="button" disabled={!isReady} onClick={startTranscription}><span>START TRANSCRIPTION</span><small>「 TRANSCRIPTION JUTSU 」</small><b>→</b></button>
       </section>}

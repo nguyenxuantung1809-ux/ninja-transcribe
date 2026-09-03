@@ -42,9 +42,9 @@ function normalizeSegments(data: OpenAITranscription): TranscriptSegment[] {
 }
 
 function friendlyApiError(status: number, detail?: string): string {
-  if (status === 401 || status === 403) return 'The transcription service is not configured correctly. Please check the server API key.';
+  if (status === 401 || status === 403) return 'The transcription service is temporarily unavailable. Please try again later.';
   if (status === 413) return 'This media file is too large for the transcription service. Try an audio-only or compressed version.';
-  if (status === 429) return 'The transcription quota is currently exhausted. Please wait a moment or check API billing.';
+  if (status === 429) return 'The transcription service is busy right now. Please wait a moment and try again.';
   if (status >= 500) return 'The transcription service is temporarily unavailable. Please try again shortly.';
   if (detail?.toLowerCase().includes('format')) return 'This media format could not be decoded. Convert it to MP4, MP3, M4A, WAV or WebM and try again.';
   return detail ? `Transcription failed: ${detail}` : 'Transcription failed. Please try another file.';
