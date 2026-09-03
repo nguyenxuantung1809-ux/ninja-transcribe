@@ -27,6 +27,7 @@ class PipelineError(Exception):
     code: str
     public_message: str
     http_status: int = 422
+    internal_detail: str | None = None
 
     def __str__(self) -> str:
         return self.public_message
@@ -61,19 +62,50 @@ def canonical_url(value: str) -> str:
     return f"https://www.youtube.com/watch?v={extract_video_id(value)}"
 
 
+def _safe_diagnostic(error: BaseException) -> str:
+    """Keep actionable yt-dlp diagnostics in server logs without leaking credentials."""
+    detail = re.sub(r"(?i)(https?://)[^\s/@:]+:[^\s/@]+@", r"\1***:***@", str(error))
+    detail = re.sub(r"(?i)(authorization\s*:\s*bearer\s+)\S+", r"\1***", detail)
+    return re.sub(r"\s+", " ", detail).strip()[:2000]
+
+
 def _map_youtube_error(error: BaseException, *, audio_download: bool = False) -> PipelineError:
-    detail = str(error).lower()
+    diagnostic = _safe_diagnostic(error)
+    detail = diagnostic.lower()
     if "private video" in detail or "this video is private" in detail:
-        return PipelineError("PRIVATE_VIDEO", "This YouTube video is private.")
-    if any(token in detail for token in ("sign in to confirm your age", "age-restricted", "login required", "members-only")):
-        return PipelineError("LOGIN_REQUIRED", "This video is age/login restricted and cannot be accessed by the transcription server.")
+        return PipelineError("PRIVATE_VIDEO", "This YouTube video is private.", internal_detail=diagnostic)
+    if any(token in detail for token in ("not a bot", "bot verification", "confirm you’re not a bot", "confirm you're not a bot")):
+        return PipelineError(
+            "YOUTUBE_BOT_VERIFICATION",
+            "YouTube blocked this transcription server's IP with bot verification. The service administrator must configure a supported YouTube proxy.",
+            502,
+            diagnostic,
+        )
+    if any(token in detail for token in ("sign in to confirm your age", "age-restricted", "login required", "login_required", "members-only")):
+        return PipelineError(
+            "LOGIN_REQUIRED",
+            "This video is age/login restricted and cannot be accessed by the transcription server.",
+            internal_detail=diagnostic,
+        )
     if any(token in detail for token in ("video unavailable", "video is unavailable", "this video is unavailable", "has been removed", "copyright")):
-        return PipelineError("VIDEO_UNAVAILABLE", "This YouTube video is unavailable.")
-    if any(token in detail for token in ("http error 403", "http error 429", "forbidden", "too many requests", "not a bot")):
-        return PipelineError("YOUTUBE_BLOCKED", "YouTube refused access from the transcription server. Please try again shortly.", 502)
+        return PipelineError("VIDEO_UNAVAILABLE", "This YouTube video is unavailable.", internal_detail=diagnostic)
+    if any(token in detail for token in ("http error 429", "too many requests")):
+        return PipelineError(
+            "YOUTUBE_RATE_LIMITED",
+            "YouTube rate-limited the transcription server (HTTP 429).",
+            502,
+            diagnostic,
+        )
+    if any(token in detail for token in ("http error 403", "forbidden")):
+        return PipelineError(
+            "YOUTUBE_ACCESS_DENIED",
+            "YouTube denied this transcription server access (HTTP 403).",
+            502,
+            diagnostic,
+        )
     if audio_download:
-        return PipelineError("AUDIO_DOWNLOAD_FAILED", "The server could not download this video's audio stream.", 502)
-    return PipelineError("YOUTUBE_BLOCKED", "YouTube could not be read by the transcription server.", 502)
+        return PipelineError("AUDIO_DOWNLOAD_FAILED", "The server could not download this video's audio stream.", 502, diagnostic)
+    return PipelineError("YOUTUBE_BLOCKED", "YouTube could not be read by the transcription server.", 502, diagnostic)
 
 
 def _ffmpeg_binary() -> str:

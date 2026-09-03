@@ -10,6 +10,8 @@ This service runs the parts that cannot execute inside ChatGPT Sites/Cloudflare 
 
 The production image includes a local bgutil Proof-of-Origin token provider for YouTube. Optional overrides: `YOUTUBE_PLAYER_CLIENTS`, `YOUTUBE_POT_PROVIDER_URL`, `YOUTUBE_COOKIES_B64`, `YOUTUBE_COOKIES_FILE`, `YOUTUBE_PROXY`, `OPENAI_TRANSCRIBE_MODEL`, `AUDIO_CHUNK_SECONDS`, `MAX_CONCURRENT_JOBS`, `JOB_TTL_SECONDS`.
 
+`YOUTUBE_PROXY` accepts the proxy URL format supported by yt-dlp, for example `http://username:password@host:port`. It is read only by the backend. Railway and similar datacenter IP ranges can still receive YouTube `LOGIN_REQUIRED`, HTTP 403/429, or bot-verification responses even with EJS and Proof-of-Origin tokens; the backend reports those as distinct error codes and logs the sanitized yt-dlp detail. A residential/ISP proxy is the production-safe fallback. YouTube account cookies are supported only as an operator-controlled emergency option because they expire and can put the account at risk.
+
 ## Local run
 
 ```powershell

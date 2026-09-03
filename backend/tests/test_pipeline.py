@@ -44,13 +44,20 @@ class ErrorMappingTests(unittest.TestCase):
             "This is a private video": "PRIVATE_VIDEO",
             "Sign in to confirm your age": "LOGIN_REQUIRED",
             "This video is unavailable": "VIDEO_UNAVAILABLE",
-            "HTTP Error 429 Too Many Requests": "YOUTUBE_BLOCKED",
+            "HTTP Error 429 Too Many Requests": "YOUTUBE_RATE_LIMITED",
+            "HTTP Error 403 Forbidden": "YOUTUBE_ACCESS_DENIED",
+            "LOGIN_REQUIRED: Sign in to confirm you’re not a bot": "YOUTUBE_BOT_VERIFICATION",
         }
         for message, code in cases.items():
             with self.subTest(message=message):
                 self.assertEqual(_map_youtube_error(RuntimeError(message)).code, code)
         self.assertEqual(_map_youtube_error(RuntimeError("download stopped"), audio_download=True).code, "AUDIO_DOWNLOAD_FAILED")
         self.assertNotEqual(_map_youtube_error(RuntimeError("Requested format is not available")).code, "VIDEO_UNAVAILABLE")
+
+    def test_proxy_credentials_are_redacted_from_server_diagnostics(self) -> None:
+        error = _map_youtube_error(RuntimeError("HTTP Error 403 via https://user:password@proxy.example:8443"))
+        self.assertEqual(error.code, "YOUTUBE_ACCESS_DENIED")
+        self.assertNotIn("password", error.internal_detail or "")
 
     def test_missing_api_key_stays_server_side(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

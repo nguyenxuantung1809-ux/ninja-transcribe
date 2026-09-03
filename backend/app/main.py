@@ -50,6 +50,8 @@ def health() -> dict[str, object]:
         "ok": True,
         "openaiConfigured": bool(os.getenv("OPENAI_API_KEY", "").strip()),
         "sharedSecretConfigured": bool(os.getenv("BACKEND_SHARED_SECRET", "").strip()),
+        "youtubeProxyConfigured": bool(os.getenv("YOUTUBE_PROXY", "").strip()),
+        "youtubeCookiesConfigured": bool(os.getenv("YOUTUBE_COOKIES_B64", "").strip() or os.getenv("YOUTUBE_COOKIES_FILE", "").strip()),
         "ytDlpAvailable": True,
         "ffmpegConfigured": ffmpeg_available,
     }

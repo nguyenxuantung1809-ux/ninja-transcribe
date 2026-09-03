@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import threading
 import time
@@ -9,6 +10,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .pipeline import PipelineError, canonical_url, run_pipeline
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -81,12 +85,27 @@ class JobManager:
         if not job:
             return
         self._update(job_id, status="processing")
+        logger.info("youtube_job_started job_id=%s url=%s", job_id, job.url)
         try:
             result = run_pipeline(job.url, lambda stage, value, message: self._progress(job_id, stage, value, message))
             self._update(job_id, status="completed", stage="completed", progress=100, message="Hoàn thành", result=result)
+            logger.info(
+                "youtube_job_completed job_id=%s method=%s segments=%s",
+                job_id,
+                result.get("transcriptionMethod", "unknown"),
+                len(result.get("segments", [])),
+            )
         except PipelineError as exc:
+            logger.warning(
+                "youtube_job_failed job_id=%s code=%s http_status=%s detail=%s",
+                job_id,
+                exc.code,
+                exc.http_status,
+                exc.internal_detail or "not_available",
+            )
             self._update(job_id, status="failed", error_code=exc.code, error=exc.public_message)
         except Exception:
+            logger.exception("youtube_job_failed job_id=%s code=INTERNAL_ERROR", job_id)
             self._update(job_id, status="failed", error_code="INTERNAL_ERROR", error="The transcription server encountered an unexpected error.")
 
     def _prune_locked(self) -> None:
