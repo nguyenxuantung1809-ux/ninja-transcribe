@@ -114,7 +114,7 @@ export default function Home() {
       </section>}
 
       {phase === 'processing' && source && <ProcessingScreen progress={progress} source={source} youtubeStage={youtubeStage} />}
-      {phase === 'result' && result && <TranscriptResult result={result} mediaUrl={mediaUrl} onClear={clear} />}
+      {phase === 'result' && result && <TranscriptResult result={result} mediaUrl={mediaUrl} />}
       {phase !== 'result' && <footer className="privacy-line"><span className="lock-mark">◆</span><p><strong>PRIVATE BY DESIGN</strong> Your files are processed temporarily and never permanently stored.</p><span className="footer-code">NT // 001</span></footer>}
     </main>
   );
