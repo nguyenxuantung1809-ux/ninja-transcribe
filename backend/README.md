@@ -8,7 +8,7 @@ This service runs the parts that cannot execute inside ChatGPT Sites/Cloudflare 
 - `BACKEND_SHARED_SECRET`: a long random value shared only with the Sites server routes.
 - `ALLOWED_ORIGINS`: comma-separated frontend origins.
 
-Optional: `YOUTUBE_COOKIES_B64`, `YOUTUBE_COOKIES_FILE`, `YOUTUBE_PROXY`, `OPENAI_TRANSCRIBE_MODEL`, `AUDIO_CHUNK_SECONDS`, `MAX_CONCURRENT_JOBS`, `JOB_TTL_SECONDS`.
+The production image includes a local bgutil Proof-of-Origin token provider for YouTube. Optional overrides: `YOUTUBE_PLAYER_CLIENTS`, `YOUTUBE_POT_PROVIDER_URL`, `YOUTUBE_COOKIES_B64`, `YOUTUBE_COOKIES_FILE`, `YOUTUBE_PROXY`, `OPENAI_TRANSCRIBE_MODEL`, `AUDIO_CHUNK_SECONDS`, `MAX_CONCURRENT_JOBS`, `JOB_TTL_SECONDS`.
 
 ## Local run
 

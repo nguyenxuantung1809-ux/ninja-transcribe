@@ -110,6 +110,12 @@ def _cookie_file(temp_dir: Path) -> Path | None:
 
 
 def _ydl_options(temp_dir: Path, download: bool, progress: ProgressCallback) -> dict[str, Any]:
+    player_clients = [
+        item.strip()
+        for item in os.getenv("YOUTUBE_PLAYER_CLIENTS", "mweb,web_safari").split(",")
+        if item.strip()
+    ]
+    pot_provider_url = os.getenv("YOUTUBE_POT_PROVIDER_URL", "http://127.0.0.1:4416").strip()
     options: dict[str, Any] = {
         "quiet": True,
         "no_warnings": True,
@@ -120,6 +126,10 @@ def _ydl_options(temp_dir: Path, download: bool, progress: ProgressCallback) -> 
         "extractor_retries": 3,
         "outtmpl": str(temp_dir / "source.%(ext)s"),
         "format": "bestaudio" if download else None,
+        "extractor_args": {
+            "youtube": {"player_client": player_clients},
+            "youtubepot-bgutilhttp": {"base_url": [pot_provider_url]},
+        },
     }
     proxy = os.getenv("YOUTUBE_PROXY", "").strip()
     if proxy:
